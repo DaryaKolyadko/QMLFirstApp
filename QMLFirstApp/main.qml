@@ -14,12 +14,25 @@ ApplicationWindow {
     height: 500
     visible: true
 
+//    Window.onHeightChanged: {
+//        textInputRectangle.height = (appWindow.height + appWindow.width)/30
+//        console.log((appWindow.height + appWindow.width)/30)
+//       // stopWatchLabel.font.pointSize = (appWindow.height + appWindow.width)/40
+//    }
+
+//    Window.onWidthChanged: {
+//        textInputRectangle.height = (appWindow.height + appWindow.width)/30
+//        console.log((appWindow.height + appWindow.width)/30)
+//      //  stopWatchLabel.font.pointSize = (appWindow.height + appWindow.width)/40
+//    }
+
     TabView {
         anchors.fill: parent
-        id: stopWatchTabView
+        id: tabView
 
         Tab {
-            title: "Секундомер"
+            id: stopWatchTab
+            title: qsTr("Секундомер")
 
             Item
             {
@@ -32,11 +45,12 @@ ApplicationWindow {
                 property bool stopWatchIsRunning: false
                 property int elapsed: 0
                 property date previousTime: new Date()
+                property string defaultTimeStr: qsTr("00:00:00.000")
 
                 anchors.fill: parent
 
                 GridLayout {
-                    id: gridLayoutTimer
+                    id: gridLayoutStopWatch
                     width: appWindow.width*3/5
                     columns: 2
                     anchors.centerIn: parent
@@ -65,11 +79,10 @@ ApplicationWindow {
                             Layout.columnSpan: 2
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            text: "00:00:00.000"
+                            text: defaultTimeStr
 
 
                             function update(){
-                                stopWatchLabel.font.pointSize = (appWindow.height + appWindow.width)/40
                                 var date = new Date()
                                 date = new Date(elapsed + date.getTimezoneOffset() * 60000)
                                 stopWatchLabel.text = Qt.formatDateTime(date, "HH:mm:ss.zzz")
@@ -78,7 +91,7 @@ ApplicationWindow {
 
 
                     Button {
-                        id: startOrStopstopwatch
+                        id: startOrStopStopWatch
                         text: stopWatchIsRunning ? qsTr("Стоп") : qsTr("Пуск")
                         Layout.fillWidth: true
                         onClicked: {
@@ -97,12 +110,15 @@ ApplicationWindow {
                     }
 
                     Button {
-                        id: resetStopwatch
+                        id: resetStopWatch
                         text: qsTr("Сброс")
                         Layout.fillWidth: true
                         onClicked: {
-                            stopWatchIsRunning = false;
-                            stopWatch.stop()
+                            if(stopWatchIsRunning)
+                            {
+                                stopWatchIsRunning = false;
+                                stopWatch.stop()
+                            }
                             elapsed = 0
                             stopWatchLabel.update()
                         }
@@ -113,32 +129,301 @@ ApplicationWindow {
 
 
         Tab {
-            title: "Таймер"
-            Rectangle{color: "#EBEBB8"}
+            id: timerTab
+            title: qsTr("Таймер")
+            Item
+            {
+                Rectangle{
+                    color:"#F9F8D0"
+                    width: parent.width
+                    height: parent.height
+                }
+
+                property bool timerIsRunning: false
+                property int timeLeft: 0
+                property date previousTime: new Date()
+                property string defaultTimeStr: qsTr("00:00:00.000")
+
+                anchors.fill: parent
+
+                GridLayout {
+                    id: gridLayoutTimer
+                    width: appWindow.width*3/5
+                    columns: 2
+                    anchors.centerIn: parent
+
+                    Timer {
+                        id: timer
+                        interval: 1
+                        running: false
+                        repeat: true
+                        onTriggered:
+                        {
+                            var currentTime = new Date
+                            var delta = (currentTime.getTime() - previousTime.getTime())
+                            previousTime = currentTime
+                            timeLeft -= delta
+                            timerLabel.update()
+                        }
+                      }
+
+                    Text {
+                        Layout.columnSpan: 2
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/110
+                        color: "#886B1E"
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: qsTr("Введите время в секундах:")
+                    }
+
+                    TextField {
+                        id: timeInSecondsTextInput
+                        Layout.columnSpan: 2
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/110
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        validator: IntValidator{bottom: 1}
+                        style: textFieldStyle
+                    }
+
+                    Text {
+                        id: timerLabel
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/40
+                        color: "#CF9B2E"
+                        Layout.columnSpan: 2
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: defaultTimeStr
+
+                        function update(){
+                            var date = new Date()
+                            if (timeLeft < 0)
+                            {
+                                messageDialog.show(qsTr("Время вышло"))
+                                timerIsRunning = false
+                                timer.stop()
+                                timeLeft = 0
+                            }
+                                date = new Date(timeLeft + date.getTimezoneOffset() * 60000)
+                                timerLabel.text = Qt.formatDateTime(date, "HH:mm:ss.zzz")
+                            }
+                       }
+
+
+                    Button {
+                        id: startOrStopTimer
+                        text: timerIsRunning ? qsTr("Стоп") : qsTr("Пуск")
+                        Layout.fillWidth: true
+                        onClicked: {
+                            timerIsRunning = !timerIsRunning
+                            if (!timerIsRunning)
+                            {
+                                timer.stop()
+                            }
+                            else
+                            {
+                                previousTime = new Date()
+                                if(timeInSecondsTextInput.text == "")
+                                {
+                                    timerIsRunning = false;
+                                    messageDialog.show(qsTr("Введите время, прежде чем запускать таймер"))
+                                }
+                                else
+                                {
+                                    timeLeft = parseInt(timeInSecondsTextInput.text) * 1000
+                                    timer.start()
+                                }
+                            }
+                        }
+                    }
+
+                    Button {
+                        id: resetTimer
+                        text: qsTr("Сброс")
+                        Layout.fillWidth: true
+                        onClicked: {
+                            if(timerIsRunning)
+                            {
+                                timerIsRunning = false;
+                                timer.stop()
+                            }
+                            timeLeft = 0
+                            timerLabel.update()
+                        }
+                    }
+                }
+            }
         }
 
         Tab {
+            id: alarmTab
             title: "Будильник"
-            Rectangle{color:"#F2B6B0"}
+            Item
+            {
+                Rectangle{
+                    color:"#FFDFDD"
+                    width: parent.width
+                    height: parent.height
+                }
+
+                anchors.fill: parent
+
+
+                Timer {
+                    id: currentTimeTimer
+                    interval: 1
+                    running: true
+                    repeat: true
+                    onTriggered:
+                    {
+                        alarmCurrentTimeLabel.update()
+                    }
+                  }
+
+                GridLayout{
+                    id: gridLayoutAlarm
+                    width: appWindow.width*9/11
+                    columns: 12
+                    anchors.margins: 20
+                    anchors.fill: parent
+
+                    TextField {
+                        id: hoursTextField
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/150
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        validator: IntValidator{bottom: 0; top: 23 }
+                        maximumLength: 2
+                        style: textFieldStyle
+                    }
+
+                    Text{
+                        text: ":"
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/150
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        Layout.alignment: Qt.AlignCenter
+                    }
+
+                    TextField {
+                        id: minutesTextField
+                        font.bold: true
+                        font.letterSpacing: 1
+                        Layout.columnSpan: 2
+                        font.pointSize: (appWindow.height + appWindow.width)/150
+                        Layout.fillWidth: true
+                        validator: IntValidator{bottom: 0; top: 59 }
+                        maximumLength: 2
+                        style: textFieldStyle
+                    }
+
+                    Button{
+                        id: addAlarmButton
+                        text: qsTr("Добавить будильник")
+                        Layout.columnSpan: 3
+                        onClicked:{
+                            var hours = parseInt(hoursTextField.text)
+                            var minutes = parseInt(minutesTextField.text)
+                            var date = new Date()
+                            date.setHours(hours)
+                            date.getMinutes(minutes)
+                            date.setSeconds(0)
+                            date.setMilliseconds(0)
+                        }
+                    }
+
+                    Text
+                    {
+                        id: alarmCurrentTimeLabel
+                        font.bold: true
+                        font.letterSpacing: 4
+                        font.pointSize: (appWindow.height + appWindow.width)/55
+                        color: "#B00202"
+
+                        function update(){
+                            alarmCurrentTimeLabel.text = Qt.formatDateTime(new Date, "HH:mm:ss")
+                            font.pointSize = (appWindow.height + appWindow.width)/55
+                        }
+                    }
+
+                    ListView {
+                              id: alarmListView
+                              Layout.fillHeight: true
+                              Layout.fillWidth: true
+                              anchors.margins: 5
+                              Layout.columnSpan: 6
+                              model: alarmListModel
+                              delegate: alarmListDelegate
+                              highlight: highlightBar
+                              highlightFollowsCurrentItem: false
+                              focus: true
+                    }
+
+                        Component {
+                                  id: highlightBar
+                                  Rectangle {
+                                      width: alarmListView.width
+                                      height: 50
+                                      radius: 5
+                                      color: "white"
+                                      border.color: "red"
+                                      border.width: 1
+                                      y: alarmListView.currentItem.y;
+                                      x: alarmListView.currentItem.x-3;
+                                      Behavior on y { PropertyAnimation {} }
+                                  }
+                              }
+
+                        Component {
+                                     id: alarmListDelegate
+                                     Item {
+                                         width: alarmListView.width
+                                         height: 50
+                                         Row {
+                                             ColumnLayout {
+                                                 width: 200
+                                                 Text { text: 'Name: ' + name }
+                                                 Text { text: 'Cost:' + cost }
+
+                                                  MouseArea {
+                                                      anchors.fill: parent
+
+                                                      onClicked:{
+                                                          console.debug("clicked:"+ index)
+                                                          alarmListView.currentIndex = index;
+                                                      }
+                                                  }
+                                               }
+                                            }
+                                        }
+                                     }
+
+                    Button{
+                        id: deleteAlarmButton
+                        Layout.alignment: Qt.AlignTop
+                        text: qsTr(" Удалить будильник ")
+                    }
+
+
+
+            }
         }
+        }
+
         Tab {
             title: "Hello"
-            Rectangle{color:"#B5EEB5"}
+            Rectangle{color:"#E8FDDF"}
         }
        }
-    menuBar: MenuBar {
-        Menu {
-            title: qsTr("Файл")
-            MenuItem {
-                text: qsTr("Открыть")
-                onTriggered: messageDialog.show(qsTr("Open action triggered"));
-            }
-            MenuItem {
-                text: qsTr("Выход")
-                onTriggered: Qt.quit();
-            }
-        }
-    }
 
     MainForm {
         anchors.fill: parent
@@ -150,13 +435,70 @@ ApplicationWindow {
         button3.onClicked: messageDialog.show(qsTr("Button 3 pressed"))
     }
 
+    // service elements
+
     MessageDialog {
         id: messageDialog
-        title: qsTr("May I have your attention, please?")
+        title: qsTr("Важно")
 
         function show(caption) {
             messageDialog.text = caption;
             messageDialog.open();
         }
     }
-}
+
+    Component {
+        id: textFieldStyle
+        TextFieldStyle
+        {
+        textColor: "black"
+        background: Rectangle {
+            radius: height/4
+            border.color: "lightgrey"
+            border.width: 2
+        }
+        }
+    }
+
+//    Component {
+//            id: contactDelegate
+//            Item {
+//                width: 180; height: 40
+//                Column {
+//                    Text { text: '<b>Name:</b> ' + name }
+//                    Text { text: '<b>Number:</b> ' + number }
+//                    MouseArea
+//                    {
+//                        onClicked:alarmsList.currentIndex = index;
+//                    }
+//                }
+//            }
+//            }
+
+//    ListModel {
+//        id: contactModel
+//        ListElement {
+//            name: "Bill Smith"
+//            number: "555 3264"
+//        }
+//        ListElement {
+//            name: "John Brown"
+//            number: "555 8426"
+//        }
+//        ListElement {
+//            name: "Sam Wise"
+//            number: "555 0473"
+//        }
+//    }
+
+    ListModel {
+                 id: alarmListModel
+
+                 ListElement {
+                     name: "Apple"; cost: 2.45
+                 }
+                 ListElement {
+                     name: "Banana"; cost: 1.95
+                 }
+         }
+    }
