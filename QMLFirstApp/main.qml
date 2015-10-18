@@ -14,18 +14,6 @@ ApplicationWindow {
     height: 500
     visible: true
 
-//    Window.onHeightChanged: {
-//        textInputRectangle.height = (appWindow.height + appWindow.width)/30
-//        console.log((appWindow.height + appWindow.width)/30)
-//       // stopWatchLabel.font.pointSize = (appWindow.height + appWindow.width)/40
-//    }
-
-//    Window.onWidthChanged: {
-//        textInputRectangle.height = (appWindow.height + appWindow.width)/30
-//        console.log((appWindow.height + appWindow.width)/30)
-//      //  stopWatchLabel.font.pointSize = (appWindow.height + appWindow.width)/40
-//    }
-
     TabView {
         anchors.fill: parent
         id: tabView
@@ -264,6 +252,7 @@ ApplicationWindow {
         Tab {
             id: alarmTab
             title: "Будильник"
+
             Item
             {
                 Rectangle{
@@ -274,6 +263,8 @@ ApplicationWindow {
 
                 anchors.fill: parent
 
+                property date now
+
 
                 Timer {
                     id: currentTimeTimer
@@ -283,6 +274,27 @@ ApplicationWindow {
                     onTriggered:
                     {
                         alarmCurrentTimeLabel.update()
+                    }
+                  }
+
+                Timer {
+                    id: alarmTimer
+                    interval: 1000
+                    running: true
+                    repeat: true
+                    onTriggered:
+                    {
+                        var currentTime = new Date()
+                        for(var i = 0; i < alarmListModel.count; i++)
+                        {
+                            var alarm = alarmListModel.get(i).time
+                            var delta = Math.abs(currentTime.getTime() - alarm.getTime())
+                            if(delta < 1000)
+                            {
+                                messageDialog.show(qsTr(Qt.formatDateTime(alarm, "Время: HH:mm")))
+                                alarmListModel.remove(i)
+                            }
+                        }
                     }
                   }
 
@@ -309,9 +321,9 @@ ApplicationWindow {
                         text: ":"
                         font.letterSpacing: 1
                         font.pointSize: (appWindow.height + appWindow.width)/150
+                        Layout.alignment: Qt.AlignCenter
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
-                        Layout.alignment: Qt.AlignCenter
                     }
 
                     TextField {
@@ -331,13 +343,21 @@ ApplicationWindow {
                         text: qsTr("Добавить будильник")
                         Layout.columnSpan: 3
                         onClicked:{
-                            var hours = parseInt(hoursTextField.text)
-                            var minutes = parseInt(minutesTextField.text)
-                            var date = new Date()
-                            date.setHours(hours)
-                            date.getMinutes(minutes)
-                            date.setSeconds(0)
-                            date.setMilliseconds(0)
+                            if(hoursTextField.text == "" || minutesTextField.text == "")
+                            {
+                                messageDialog.show(qsTr("Введите время, прежде чем добавлять будильник"))
+                            }
+                            else
+                            {
+                                var hours = parseInt(hoursTextField.text)
+                                var minutes = parseInt(minutesTextField.text)
+                                var date = new Date()
+                                date.setHours(hours)
+                                date.setMinutes(minutes)
+                                date.setSeconds(0)
+                                date.setMilliseconds(0)
+                                alarmListModel.append({time: date})
+                            }
                         }
                     }
 
@@ -350,73 +370,112 @@ ApplicationWindow {
                         color: "#B00202"
 
                         function update(){
-                            alarmCurrentTimeLabel.text = Qt.formatDateTime(new Date, "HH:mm:ss")
+                            now = new Date
+                            alarmCurrentTimeLabel.text = Qt.formatDateTime(now, "HH:mm:ss")
                             font.pointSize = (appWindow.height + appWindow.width)/55
                         }
                     }
 
-                    ListView {
+                    ScrollView{
+                        id: alarmScrollView
+                        Layout.columnSpan: 6
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
+
+                        ListView {
                               id: alarmListView
-                              Layout.fillHeight: true
-                              Layout.fillWidth: true
-                              anchors.margins: 5
-                              Layout.columnSpan: 6
                               model: alarmListModel
                               delegate: alarmListDelegate
                               highlight: highlightBar
                               highlightFollowsCurrentItem: false
+                              spacing: 5
                               focus: true
+                        }
                     }
 
-                        Component {
-                                  id: highlightBar
-                                  Rectangle {
-                                      width: alarmListView.width
-                                      height: 50
-                                      radius: 5
-                                      color: "white"
-                                      border.color: "red"
-                                      border.width: 1
-                                      y: alarmListView.currentItem.y;
-                                      x: alarmListView.currentItem.x-3;
-                                      Behavior on y { PropertyAnimation {} }
-                                  }
-                              }
+                    Component {
+                        id: highlightBar
 
-                        Component {
-                                     id: alarmListDelegate
-                                     Item {
-                                         width: alarmListView.width
-                                         height: 50
-                                         Row {
-                                             ColumnLayout {
-                                                 width: 200
-                                                 Text { text: 'Name: ' + name }
-                                                 Text { text: 'Cost:' + cost }
+                        Rectangle {
+                            id: highlightBarRect
+                            width: alarmListView.width
+                            Layout.fillWidth: true
+                            height: 50 //appWindow.height + appWindow.width)/50
+                            radius: 5
+                            color: "white"
+                            border.color: "red"
+                            border.width: 1
+                            y: alarmListView.currentItem.y;
+                            x: alarmListView.currentItem.x;
+                            Behavior on y { PropertyAnimation {} }
+                        }
+                    }
 
-                                                  MouseArea {
-                                                      anchors.fill: parent
+                    Component {
+                        id: alarmListDelegate
 
-                                                      onClicked:{
-                                                          console.debug("clicked:"+ index)
-                                                          alarmListView.currentIndex = index;
-                                                      }
-                                                  }
-                                               }
-                                            }
+                        Item {
+                            id: alarmListDelegateItem
+                            width: alarmListView.width
+                            Layout.fillWidth: true
+                            height: 50
+
+                            Row {
+                                ColumnLayout {
+                                    width: alarmListView.width
+                                    Layout.fillWidth: true
+
+                                    Text {
+                                        text: Qt.formatDateTime(time, " HH:mm")
+                                        font.pointSize: (appWindow.height + appWindow.width)/150
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+
+                                        onClicked:{
+                                            alarmListView.currentIndex = index;
                                         }
-                                     }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    MessageDialog{
+                        id: deleteAlarmMessageDialog
+                        title: qsTr("Важно")
+                        text: "Вы уверены, что хотите удалить выбранный будильник?"
+                        standardButtons: StandardButton.Yes | StandardButton.No
+
+                        onYes: {
+                            alarmListModel.remove(alarmListView.currentIndex)
+                            close()
+                        }
+
+                        onNo:{
+                            close()
+                        }
+                    }
 
                     Button{
                         id: deleteAlarmButton
                         Layout.alignment: Qt.AlignTop
                         text: qsTr(" Удалить будильник ")
+
+                        onClicked: {
+                            if(alarmListView.currentIndex == -1)
+                            {
+                                 messageDialog.show("Выберите будильник, который хотите удалить")
+                            }
+                            else
+                            {
+                                deleteAlarmMessageDialog.open()
+                            }
+                        }
                     }
-
-
-
+                }
             }
-        }
         }
 
         Tab {
@@ -451,54 +510,16 @@ ApplicationWindow {
         id: textFieldStyle
         TextFieldStyle
         {
-        textColor: "black"
-        background: Rectangle {
-            radius: height/4
-            border.color: "lightgrey"
-            border.width: 2
-        }
+            textColor: "black"
+            background: Rectangle {
+                radius: height/4
+                border.color: "lightgrey"
+                border.width: 2
+            }
         }
     }
-
-//    Component {
-//            id: contactDelegate
-//            Item {
-//                width: 180; height: 40
-//                Column {
-//                    Text { text: '<b>Name:</b> ' + name }
-//                    Text { text: '<b>Number:</b> ' + number }
-//                    MouseArea
-//                    {
-//                        onClicked:alarmsList.currentIndex = index;
-//                    }
-//                }
-//            }
-//            }
-
-//    ListModel {
-//        id: contactModel
-//        ListElement {
-//            name: "Bill Smith"
-//            number: "555 3264"
-//        }
-//        ListElement {
-//            name: "John Brown"
-//            number: "555 8426"
-//        }
-//        ListElement {
-//            name: "Sam Wise"
-//            number: "555 0473"
-//        }
-//    }
 
     ListModel {
-                 id: alarmListModel
-
-                 ListElement {
-                     name: "Apple"; cost: 2.45
-                 }
-                 ListElement {
-                     name: "Banana"; cost: 1.95
-                 }
-         }
+        id: alarmListModel
     }
+}
