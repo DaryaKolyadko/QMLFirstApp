@@ -9,14 +9,20 @@ import QtQuick.Layouts 1.1
 
 ApplicationWindow {
     id: appWindow
+    objectName: "appWindow"
     title: qsTr("QML First App")
     width: 700
     height: 500
     visible: true
 
+    Connections {
+        target: receiver
+    }
+
     TabView {
         anchors.fill: parent
         id: tabView
+        objectName: "tabView"
 
         Tab {
             id: stopWatchTab
@@ -479,20 +485,74 @@ ApplicationWindow {
         }
 
         Tab {
+            id: helloTab
+            objectName: "helloTab"
             title: "Hello"
-            Rectangle{color:"#E8FDDF"}
+
+            Item{
+                Rectangle{
+                    color:"#E8FDDF"
+                    width: parent.width
+                    height: parent.height
+                }
+
+                anchors.fill: parent
+
+                GridLayout {
+                    id: gridLayoutHello
+                    width: appWindow.width*3/5
+                    columns: 2
+                    anchors.centerIn: parent
+
+                    Text{
+                        id: greetingLabel
+                        objectName: "greetingLabel"
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/50
+                        color: "#60D511"
+                        Layout.columnSpan: 2
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
+
+                    Text{
+                        id: enterNameLabel
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/110
+                        color: "#0C8F33"
+                        Layout.columnSpan: 2
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: qsTr("Введите ваше имя:")
+                    }
+
+                    TextField{
+                        id: enterNameTextField
+                        objectName: "enterNameTextField"
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.pointSize: (appWindow.height + appWindow.width)/110
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        style: textFieldStyle
+                    }
+
+                    Button{
+                        id: sayHelloButton
+                        Layout.columnSpan: 2
+                        Layout.fillWidth: true
+                        text: qsTr("Пусть программа со мной поздоровается")
+                        onClicked:{
+                            receiver.recieveHelloButtonClick()
+                        }
+                    }
+                }
+            }
+
         }
        }
-
-    MainForm {
-        anchors.fill: parent
-        button1.visible: false
-        button2.visible: false
-        button3.visible: false
-        button1.onClicked: messageDialog.show(qsTr("Button 1 pressed"))
-        button2.onClicked: messageDialog.show(qsTr("Button 2 pressed"))
-        button3.onClicked: messageDialog.show(qsTr("Button 3 pressed"))
-    }
 
     // service elements
 
